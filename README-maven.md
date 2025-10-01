@@ -28,3 +28,12 @@ Build a specific module.
 
 mvn clean install -pl module-name -am
 Build a module and its dependencies.
+
+# Execute
+
+mvn -pl router exec:java
+mvn -pl router exec:java
+mvn -pl market exec:java
+
+	•	exec:java is goal-oriented, not standalone like java -jar.
+	•	By default, it runs in the validate -> compile -> exec:java order.
