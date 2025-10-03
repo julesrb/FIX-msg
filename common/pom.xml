@@ -10,35 +10,12 @@
 		<version>1.0-SNAPSHOT</version>
 	</parent>
 
-	<artifactId>broker</artifactId>
+	<artifactId>common</artifactId>
 	<packaging>jar</packaging>
 	<properties>
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
-
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<configuration>
-					<archive>
-						<manifest>
-							<mainClass>com.github.julesrb.fixme.broker.Main</mainClass>
-						</manifest>
-					</archive>
-				</configuration>
-			</plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>com.github.julesrb.fixme.broker.Main</mainClass>
-                </configuration>
-            </plugin>
-		</plugins>
-	</build>
 
 </project>
