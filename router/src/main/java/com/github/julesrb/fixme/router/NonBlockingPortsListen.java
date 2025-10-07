@@ -1,0 +1,103 @@
+package com.github.julesrb.fixme.router;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
+import java.util.Set;
+
+public class NonBlockingPortsListen {
+
+    private int[]       ports;
+    private final Selector    selector;
+
+    NonBlockingPortsListen() throws IOException {
+        selector = Selector.open();
+    }
+
+    void addPort(int port) throws IOException {
+        ServerSocketChannel server = ServerSocketChannel.open();
+        server.configureBlocking(false);
+        server.bind(new InetSocketAddress(port));
+        server.register(selector, SelectionKey.OP_ACCEPT);
+        System.out.println("Socket Server started on port " + port);
+    }
+
+    void acceptConnection(SelectionKey key) throws IOException {
+        ServerSocketChannel server = (ServerSocketChannel) key.channel();
+        SocketChannel client = server.accept();
+        System.out.println("Accepted from port " + ((InetSocketAddress) server.getLocalAddress()).getPort());
+        client.configureBlocking(false);
+        client.register(selector, SelectionKey.OP_READ);
+    }
+
+    int read(SelectionKey key) throws IOException {
+        SocketChannel client = (SocketChannel) key.channel();
+        int localPort = ((InetSocketAddress) client.getLocalAddress()).getPort();
+
+        int BUFFER_SIZE = 1024;
+        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
+        try {
+            int bytesRead = client.read(buffer);
+            if (bytesRead == -1) {   // Connection closed by client
+                System.out.println("Connection close on port " + localPort);
+                key.cancel();
+                client.close();
+                return -1;
+            }
+            buffer.flip();
+            byte[] receivedBytes = new byte[buffer.remaining()];
+            buffer.get(receivedBytes);
+            System.out.println(receivedBytes.length);
+            String message = new String(receivedBytes, StandardCharsets.UTF_8);
+            System.out.println(message);
+            // now immediately after receiving the message we want to write the ack to client.
+            // So we register OP_WRITE now so that our server is ready to write to outbound buffer.
+            key.interestOpsOr(SelectionKey.OP_WRITE);
+            return 0;
+        } catch (SocketException e) {
+            e.printStackTrace();
+            key.cancel();
+            client.close();
+            return -1;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+
+    void poll() throws IOException {
+        int readyCount = selector.select();
+        if (readyCount == 0) return;
+
+        Set<SelectionKey> readyKeySet = selector.selectedKeys();
+        Iterator<SelectionKey> iterator = readyKeySet.iterator();
+
+        while (iterator.hasNext()) {
+
+            SelectionKey key = iterator.next();
+            iterator.remove();
+            if (key.isAcceptable()) {
+                acceptConnection(key);
+            }
+            if (key.isReadable()) {
+                if (read(key) == -1) {
+                    continue;
+                }
+            }
+            if (key.isWritable()) {
+                SocketChannel client = (SocketChannel) key.channel();
+                String response = "server received\n";
+                client.write(ByteBuffer.wrap(response.getBytes(StandardCharsets.UTF_8)));
+                key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+            }
+        }
+    }
+}

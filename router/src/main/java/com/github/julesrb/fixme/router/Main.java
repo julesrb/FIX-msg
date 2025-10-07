@@ -1,11 +1,18 @@
 package com.github.julesrb.fixme.router;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+import java.io.IOException;
+
 public class Main {
-    public static void main(String[] args) {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome from router!");
+    public static void main(String[] args) throws IOException {
+
+        System.out.println("Hello and welcome from router!");
+
+        NonBlockingPortsListen Servers = new NonBlockingPortsListen();
+        Servers.addPort(5000);
+        Servers.addPort(5001);
+
+        while (true) {
+            Servers.poll();
+        }
     }
 }
