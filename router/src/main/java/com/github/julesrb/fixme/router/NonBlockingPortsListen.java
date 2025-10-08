@@ -91,12 +91,20 @@ public class NonBlockingPortsListen {
                 if (read(key) == -1) {
                     continue;
                 }
+//                Incoming FIX message
+//                   ↓
+//                concatenate the buffer if needed. might be a fix segement ?
+//                   |
+//                [ValidationHandler]  → verify checksum, structure
+//                   ↓
+//                [IdentificationHandler] → find source/destination IDs
+//                   ↓
+//                [RoutingHandler] → forward to correct Market or Broker
             }
             if (key.isWritable()) {
                 SocketChannel client = (SocketChannel) key.channel();
                 String response = "server received\n";
                 client.write(ByteBuffer.wrap(response.getBytes(StandardCharsets.UTF_8)));
-                key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
             }
         }
     }
