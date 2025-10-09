@@ -29,12 +29,23 @@ public class FixMessage {
 
     public FixMessage(String message) {
         this.msg = message;
-        String[] tokens = message.split("\u0001");
+    }
+
+    public void parseMessage() throws FixParseException {
+        if (msg == null || msg.isBlank())
+            throw new FixParseException("Message cannot be null or blank");
+        String[] tokens = msg.split("\u0001");
         for (String token : tokens) {
             if (token.isEmpty()) continue;
-            String[] part = token.split("=", 2);
-            int tag = parseInt(part[0]);
-            fields.put(tag, part[1]);
+            String[] part = token.split("=");
+            if (part.length != 2)
+                throw new FixParseException("Malformed token: " + token);
+            try {
+                int tag = parseInt(part[0]);
+                fields.put(tag, part[1]);
+            } catch (NumberFormatException e) {
+                throw new FixParseException("Invalid tag number: " + part[0]);
+            }
             System.out.println("added " + part[0] + " = " + part[1]);
         }
     }
