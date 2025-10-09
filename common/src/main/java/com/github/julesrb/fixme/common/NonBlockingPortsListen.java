@@ -1,6 +1,7 @@
-package com.github.julesrb.fixme.router;
+package com.github.julesrb.fixme.common;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
@@ -17,16 +18,22 @@ public class NonBlockingPortsListen {
     private int[]       ports;
     private final Selector    selector;
 
-    NonBlockingPortsListen() throws IOException {
+    public NonBlockingPortsListen() throws IOException {
         selector = Selector.open();
     }
 
-    void addPort(int port) throws IOException {
+    public int addPort(int port) throws IOException {
         ServerSocketChannel server = ServerSocketChannel.open();
         server.configureBlocking(false);
-        server.bind(new InetSocketAddress(port));
+        try {
+            server.bind(new InetSocketAddress(port));
+        } catch (BindException e) {
+            System.err.println("Port " + port + " is already in use!");
+        }
         server.register(selector, SelectionKey.OP_ACCEPT);
-        System.out.println("Socket Server started on port " + port);
+        int assignedPort = server.socket().getLocalPort();  // <-- actual port assigned
+        System.out.println("Socket Server started on port " + assignedPort);
+        return assignedPort;
     }
 
     void acceptConnection(SelectionKey key) throws IOException {
@@ -73,7 +80,7 @@ public class NonBlockingPortsListen {
     }
 
 
-    void poll() throws IOException {
+    public void poll() throws IOException {
         int readyCount = selector.select();
         if (readyCount == 0) return;
 

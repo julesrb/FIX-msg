@@ -1,11 +1,23 @@
 package com.github.julesrb.fixme.broker;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+import com.github.julesrb.fixme.common.NonBlockingPortsListen;
+
+import java.io.IOException;
+
+
 public class Main {
-    public static void main(String[] args) {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome from broker!");
+    public static void main(String[] args) throws IOException {
+
+        System.out.println("Hello and welcome from BROKER!");
+        try {
+            NonBlockingPortsListen servers = new NonBlockingPortsListen();
+            int assignedPort = servers.addPort(0); // OS choose free port
+
+            while (true) {
+                servers.poll();
+            }
+        } catch (IOException e) {
+            System.out.println(e);
+        }
     }
 }
