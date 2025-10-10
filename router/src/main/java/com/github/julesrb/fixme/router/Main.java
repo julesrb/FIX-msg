@@ -1,6 +1,6 @@
 package com.github.julesrb.fixme.router;
 
-import com.github.julesrb.fixme.common.NonBlockingPortsListen;
+import com.github.julesrb.fixme.common.NioMultiServer;
 
 import java.io.IOException;
 
@@ -9,8 +9,8 @@ public class Main {
 
         System.out.println("Hello and welcome from ROUTER!");
         try {
-            NonBlockingPortsListen Servers = new NonBlockingPortsListen();
-            Servers.addPort(6000);
+            NioMultiServer Servers = new NioMultiServer();
+            Servers.addPort(5000);
             Servers.addPort(5001);
 
             while (true) {

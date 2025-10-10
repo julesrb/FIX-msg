@@ -1,22 +1,22 @@
 package com.github.julesrb.fixme.market;
 
-import com.github.julesrb.fixme.common.NonBlockingPortsListen;
-
 import java.io.IOException;
 
 public class Main {
     public static void main(String[] args) {
 
-        System.out.println("Hello and welcome from BROKER!");
+        System.out.println("Hello and welcome from MARKET!");
+        Market market = null;
         try {
-            NonBlockingPortsListen servers = new NonBlockingPortsListen();
-            int assignedPort = servers.addPort(0); // OS choose free port
-
-            while (true) {
-                servers.poll();
+            for (int i = 0; i < 10; i++) {
+                market = new Market();
+                market.connect();
             }
+            market = new Market();
+            market.connect();
         } catch (IOException e) {
-            System.out.println(e);
+            throw new RuntimeException(e);
         }
+        market.pollLoop();
     }
 }

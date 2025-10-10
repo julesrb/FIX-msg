@@ -13,12 +13,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Set;
 
-public class NonBlockingPortsListen {
+public class NioMultiServer {
 
     private int[]       ports;
     private final Selector    selector;
 
-    public NonBlockingPortsListen() throws IOException {
+    public NioMultiServer() throws IOException {
         selector = Selector.open();
     }
 
@@ -44,7 +44,7 @@ public class NonBlockingPortsListen {
         client.register(selector, SelectionKey.OP_READ);
     }
 
-    int read(SelectionKey key) throws IOException {
+    int readMessage(SelectionKey key) throws IOException {
         SocketChannel client = (SocketChannel) key.channel();
         int localPort = ((InetSocketAddress) client.getLocalAddress()).getPort();
 
@@ -95,7 +95,7 @@ public class NonBlockingPortsListen {
                 acceptConnection(key);
             }
             if (key.isReadable()) {
-                if (read(key) == -1) {
+                if (readMessage(key) == -1) {
                     continue;
                 }
 //                Incoming FIX message
