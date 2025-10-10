@@ -32,7 +32,7 @@ elif [[ "$OS" == "Linux" ]]; then
     echo "Running on Linux..."
 
     gnome-terminal -- bash -c "cd $PROJECT_DIR && mvn -pl router exec:java; exec bash"
-    gnome-terminal -- bash -c "cd $PROJECT_DIR && mvn -pl router exec:java; exec bash"
+    gnome-terminal -- bash -c "cd $PROJECT_DIR && mvn -pl broker exec:java; exec bash"
     gnome-terminal -- bash -c "cd $PROJECT_DIR && mvn -pl market exec:java; exec bash"
 
 else
