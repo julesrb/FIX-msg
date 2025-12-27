@@ -10,7 +10,7 @@ import static java.lang.Integer.parseUnsignedInt;
 // support only FIX 4.4
 public class FixMessage {
 
-    private String msg;
+    final private String rawMessage;
 
     private Map<Integer, String> fields = new HashMap<>();
 
@@ -27,14 +27,22 @@ public class FixMessage {
     private final int[] expectedTags = {8, 35, 49, 56, 55, 54, 38, 44};
 
 
-    public FixMessage(String message) {
-        this.msg = message;
+    public FixMessage(String message) throws FixParseException, FixValidationException {
+        this.rawMessage = message;
+        this.parseMessage();
+
+        int lastTagIndex = rawMessage.lastIndexOf("10=");
+        if (lastTagIndex == -1) throw new FixValidationException("Last closing checksum tag \"10=\" missing");
+        String messageWithoutChecksum = rawMessage.substring(0, lastTagIndex);
+        System.out.println("chskm: " + calculateChecksum(messageWithoutChecksum));
+        this.validateChecksum();
+        this.validateMessageFields();
     }
 
     public void parseMessage() throws FixParseException {
-        if (msg == null || msg.isBlank())
+        if (rawMessage == null || rawMessage.isBlank())
             throw new FixParseException("Message cannot be null or blank");
-        String[] tokens = msg.split("\u0001");
+        String[] tokens = rawMessage.split("\u0001");
         for (String token : tokens) {
             if (token.isEmpty()) continue;
             String[] part = token.split("=");
@@ -46,7 +54,7 @@ public class FixMessage {
             } catch (NumberFormatException e) {
                 throw new FixParseException("Invalid tag number: " + part[0]);
             }
-            System.out.println("added " + part[0] + " = " + part[1]);
+//            System.out.println("added " + part[0] + " = " + part[1]);
         }
     }
 
@@ -60,30 +68,23 @@ public class FixMessage {
     }
 
     //Check if the fields are correct, not empty and that the minimum fields are present
-    public Boolean validateMessage() {
-        if (!validateChecksum())
-            throw new RuntimeException("Checksum incorrect");
+    public void validateMessageFields() throws FixValidationException {
         for (int key : expectedTags) {
-            if (!fields.containsKey(key)) throw new RuntimeException("Missing tag = " + key);
+            if (!fields.containsKey(key)) throw new FixValidationException("Missing tag = " + key);
         }
         for (Map.Entry<Integer,String> field : fields.entrySet()) {
             int key = field.getKey();
             String value = field.getValue();
-//            if (value.isBlank()) throw new RuntimeException("Value missing for key " + key);
+            if (value.isBlank()) throw new FixValidationException("Value missing for key: " + key);
             switch (key) {
                 case BEGIN_STRING:
-                    if (!value.equals("FIX.4.4")) throw new RuntimeException("Expect FIX version 4.4");
+                    if (!value.equals("FIX.4.4")) throw new FixValidationException("Expect FIX version 4.4");
                     break;
                 case MSG_TYPE:
-                    if (value.length() > 2) throw new RuntimeException("Message type unknown");
-                    break;
-                case SENDER_COMP_ID:
-                    if (!isUnsignedInt(value)) throw new RuntimeException("Broker ID type error");
-                    break;
-                case TARGET_COMP_ID:
-                    if (!isUnsignedInt(value)) throw new RuntimeException("Market ID type error");
+                    if (value.length() > 2) throw new FixValidationException("Message type unknown");
                     break;
                 case INSTRUMENT:
+                    //TODO add validation for instruments
                     //In a simplified project, just define a list of strings that your Market supports, e.g.:
                     //If a Broker sends an order for a symbol not in the list, the Market should reject it.//
                     // List<String> tradableInstruments = List.of("AAPL", "GOOG", "TSLA");
@@ -92,38 +93,45 @@ public class FixMessage {
 	                //22 =SecurityIDSource → source of SecurityID (e.g., ISIN)
                     break;
                 case SIDE:
-                    if (!(value.equals("1") || value.equals("2"))) throw new RuntimeException("Wrong side argument");
+                    if (!(value.equals("1") || value.equals("2"))) throw new FixValidationException("Wrong side argument");
                     break;
                 case QUANTITY:
-                    if (!isUnsignedInt(value)) throw new RuntimeException("Quantity type error");
+                    try {
+                        new java.math.BigDecimal(value);
+                    } catch (Exception e) {
+                        throw new FixValidationException("Quantity var type error");
+                    }
                     break;
                 case PRICE:
-                    if (!isUnsignedInt(value)) throw new RuntimeException("Price ID type error");
+                    try {
+                        new java.math.BigDecimal(value);
+                    } catch (Exception e) {
+                        throw new FixValidationException("Price ID var type error");
+                    }
                     break;
             }
         }
-        return true;
     }
 
     public String calculateChecksum(String messageWithoutChecksum) {
         byte[] bytes = messageWithoutChecksum.getBytes(StandardCharsets.US_ASCII);
         int sum = 0;
         for (byte b : bytes) {
-            sum += (b & 0xFF); // Makes it unsigned
+            sum += (b & 0xFF);
         }
         int checksum = sum % 256;
-        return String.format("%03d", checksum); // always 3 digits
+        return String.format("%03d", checksum);
     }
 
-    public Boolean validateChecksum() {
-        int lastTagIndex = msg.lastIndexOf("10=");
-        if (lastTagIndex == -1) return false;
+    public void validateChecksum() throws FixValidationException {
+        int lastTagIndex = rawMessage.lastIndexOf("10=");
+        if (lastTagIndex == -1) throw new FixValidationException("Last closing checksum tag \"10=\" missing");
 
-        String messageWithoutChecksum = msg.substring(0, lastTagIndex);
+        String messageWithoutChecksum = rawMessage.substring(0, lastTagIndex);
         String provided = fields.get(CHECKSUM);
         String expected = calculateChecksum(messageWithoutChecksum);
 
-        return expected.equals(provided);
+        if (!expected.equals(provided)) throw new FixValidationException("invalid checksum");
     }
 
 }
