@@ -11,7 +11,7 @@ public class RoutingTable {
     private int routingIdBrokerCounter = 200000;
     Map<Integer, ConnectionContext> routerMap = new HashMap<>();
 
-    private RoutingTable() {}
+public RoutingTable() {}
 
     public RoutingTable getInstance() {
         if (instance == null) {
@@ -29,6 +29,8 @@ public class RoutingTable {
         routerMap.put(routingIdMarketCounter, new ConnectionContext(client));
         return routingIdMarketCounter++;
     }
+
+    //TODO remove entry from the map if the connection closes ?
 
 
 
