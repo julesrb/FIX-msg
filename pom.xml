@@ -15,6 +15,7 @@
 		<module>market</module>
         <module>common</module>
         <module>mini-mock-system</module>
+        <module>springbootdb</module>
     </modules>
 
 	<properties>
