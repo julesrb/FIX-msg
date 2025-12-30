@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 
 public class NioClient {
     private SocketChannel channel;
+    private volatile boolean pooling = true;
     private final Selector selector;
     private final int port;
     private String outBuffer;
@@ -44,19 +45,21 @@ public class NioClient {
         System.out.println("need to implement handle Message");
     }
 
-    public void buildFIXMsg(String msg) {
+    public boolean buildFIXMsg(String msg) {
         inBuffer.append(msg);
-        int fIXStart = inBuffer.indexOf("\u00018=FIX");
-        int fixEndA = inBuffer.indexOf("\u000110=", fIXStart);
-        int fixEndB = inBuffer.indexOf("\u0001", fixEndA);
+        int fIXStart = inBuffer.indexOf("8=FIX");
+        int fixEndA = inBuffer.indexOf("\u000110=", fIXStart + 1);
+        int fixEndB = inBuffer.indexOf("\u0001", fixEndA + 1);
         if (fIXStart == -1) {
             inBuffer.setLength(0);
-            return;
+            return false;
         }
         if (!(fixEndA == -1 || fixEndB == -1)) {
             handleMsg(new String(inBuffer));
             inBuffer.setLength(0);
+            return true;
         }
+        return false;
     }
 
     private void handleWrite(SelectionKey key) throws IOException {
@@ -81,7 +84,7 @@ public class NioClient {
             buffer.flip();
             byte[] bytes = new byte[buffer.remaining()];
             buffer.get(bytes);
-            String receivedStr = new String(bytes, StandardCharsets.UTF_8);
+            String receivedStr = new String(bytes);
             buildFIXMsg(receivedStr);
         } catch (IOException e) {
             client.close();
@@ -105,16 +108,20 @@ public class NioClient {
         }
     }
 
+    public void stop() {
+        pooling = false;
+        selector.wakeup();
+    }
+
     public void pollLoop() {
         try {
-            while (true) {
+            while (pooling) {
                 this.poll();
             }
         } catch (IOException e) {
             System.err.println(e.getMessage());
         }
     }
-
 }
 
 
