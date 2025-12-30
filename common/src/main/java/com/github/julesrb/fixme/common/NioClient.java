@@ -13,11 +13,13 @@ public class NioClient {
     private final Selector selector;
     private final int port;
     private String outBuffer;
+    private StringBuilder inBuffer;
 
     public NioClient(int port) throws IOException {
         this.port = port;
         outBuffer = null;
         selector = Selector.open();
+        inBuffer = new StringBuilder("");
     }
 
     public void connect() {
@@ -34,8 +36,27 @@ public class NioClient {
         }
     }
 
-    public void sendMessage(String msg) {
-        outBuffer = msg; //TODO should i watch out for concurrency here ?
+    public void sendMsg(String msg) {
+        outBuffer = msg; //TODO implement and should i watch out for concurrency here ?
+    }
+
+    public void handleMsg(String msg) {
+        System.out.println("need to implement handle Message");
+    }
+
+    public void buildFIXMsg(String msg) {
+        inBuffer.append(msg);
+        int fIXStart = inBuffer.indexOf("\u00018=FIX");
+        int fixEndA = inBuffer.indexOf("\u000110=", fIXStart);
+        int fixEndB = inBuffer.indexOf("\u0001", fixEndA);
+        if (fIXStart == -1) {
+            inBuffer.setLength(0);
+            return;
+        }
+        if (!(fixEndA == -1 || fixEndB == -1)) {
+            handleMsg(new String(inBuffer));
+            inBuffer.setLength(0);
+        }
     }
 
     private void handleWrite(SelectionKey key) throws IOException {
@@ -43,6 +64,29 @@ public class NioClient {
             SocketChannel client = (SocketChannel) key.channel();
             client.write(ByteBuffer.wrap(outBuffer.getBytes(StandardCharsets.UTF_8)));
             outBuffer = null;
+        }
+    }
+
+
+    private void handleRead(SelectionKey key) throws IOException {
+        SocketChannel client = (SocketChannel) key.channel();
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
+        try {
+            int bytesRead = client.read(buffer);
+            if (bytesRead == -1) {
+                client.close();
+                key.cancel();
+                return;
+            }
+            buffer.flip();
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            String receivedStr = new String(bytes, StandardCharsets.UTF_8);
+            buildFIXMsg(receivedStr);
+        } catch (IOException e) {
+            client.close();
+            key.cancel();
+            throw e;
         }
     }
 
@@ -54,7 +98,7 @@ public class NioClient {
         selector.selectedKeys().clear();
 
         if (key.isReadable()) {
-//            handleRead(key);
+            handleRead(key);
         }
         if (key.isWritable()) {
               handleWrite(key);
@@ -67,7 +111,7 @@ public class NioClient {
                 this.poll();
             }
         } catch (IOException e) {
-            System.err.println(e);
+            System.err.println(e.getMessage());
         }
     }
 
